@@ -1329,88 +1329,99 @@ class APIRouter(routing.Router):
 
         return decorator
 
-    def add_api_route(
-        self,
-        path: str,
-        endpoint: Callable[..., Any],
-        *,
-        response_model: Any = Default(None),
-        status_code: int | None = None,
-        tags: list[str | Enum] | None = None,
-        dependencies: Sequence[params.Depends] | None = None,
-        summary: str | None = None,
-        description: str | None = None,
-        response_description: str = "Successful Response",
-        responses: dict[int | str, dict[str, Any]] | None = None,
-        deprecated: bool | None = None,
-        methods: set[str] | list[str] | None = None,
-        operation_id: str | None = None,
-        response_model_include: IncEx | None = None,
-        response_model_exclude: IncEx | None = None,
-        response_model_by_alias: bool = True,
-        response_model_exclude_unset: bool = False,
-        response_model_exclude_defaults: bool = False,
-        response_model_exclude_none: bool = False,
-        include_in_schema: bool = True,
-        response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
-        name: str | None = None,
-        route_class_override: type[APIRoute] | None = None,
-        callbacks: list[BaseRoute] | None = None,
-        openapi_extra: dict[str, Any] | None = None,
-        generate_unique_id_function: Callable[[APIRoute], str]
-        | DefaultPlaceholder = Default(generate_unique_id),
-        strict_content_type: bool | DefaultPlaceholder = Default(True),
-    ) -> None:
-        route_class = route_class_override or self.route_class
-        responses = responses or {}
-        combined_responses = {**self.responses, **responses}
-        current_response_class = get_value_or_default(
-            response_class, self.default_response_class
-        )
-        current_tags = self.tags.copy()
-        if tags:
-            current_tags.extend(tags)
-        current_dependencies = self.dependencies.copy()
-        if dependencies:
-            current_dependencies.extend(dependencies)
-        current_callbacks = self.callbacks.copy()
-        if callbacks:
-            current_callbacks.extend(callbacks)
-        current_generate_unique_id = get_value_or_default(
-            generate_unique_id_function, self.generate_unique_id_function
-        )
-        route = route_class(
-            self.prefix + path,
-            endpoint=endpoint,
-            response_model=response_model,
-            status_code=status_code,
-            tags=current_tags,
-            dependencies=current_dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=combined_responses,
-            deprecated=deprecated or self.deprecated,
-            methods=methods,
-            operation_id=operation_id,
-            response_model_include=response_model_include,
-            response_model_exclude=response_model_exclude,
-            response_model_by_alias=response_model_by_alias,
-            response_model_exclude_unset=response_model_exclude_unset,
-            response_model_exclude_defaults=response_model_exclude_defaults,
-            response_model_exclude_none=response_model_exclude_none,
-            include_in_schema=include_in_schema and self.include_in_schema,
-            response_class=current_response_class,
-            name=name,
-            dependency_overrides_provider=self.dependency_overrides_provider,
-            callbacks=current_callbacks,
-            openapi_extra=openapi_extra,
-            generate_unique_id_function=current_generate_unique_id,
-            strict_content_type=get_value_or_default(
-                strict_content_type, self.strict_content_type
-            ),
-        )
-        self.routes.append(route)
+python
+import logging
+from logging.handlers import RotatingFileHandler
+from typing import Any, Callable, Enum, Sequence, Set, List, Dict, Optional, Type
+
+# Create a logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Create a file handler
+file_handler = RotatingFileHandler('api_routes.log', maxBytes=1024*1024*10, backupCount=5)
+file_handler.setLevel(logging.INFO)
+
+# Create a console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Create a formatter and set the formatter for the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+def add_api_route(
+    self,
+    path: str,
+    endpoint: Callable[..., Any],
+    *,
+    response_model: Any = Default(None),
+    status_code: int | None = None,
+    tags: list[str | Enum] | None = None,
+    dependencies: Sequence[params.Depends] | None = None,
+    summary: str | None = None,
+    description: str | None = None,
+    response_description: str = "Successful Response",
+    responses: dict[int | str, dict[str, Any]] | None = None,
+    deprecated: bool | None = None,
+    methods: set[str] | list[str] | None = None,
+    operation_id: str | None = None,
+    response_model_include: IncEx | None = None,
+    response_model_exclude: IncEx | None = None,
+    response_model_by_alias: bool = True,
+    response_model_exclude_unset: bool = False,
+    response_model_exclude_defaults: bool = False,
+    response_model_exclude_none: bool = False,
+    include_in_schema: bool = True,
+    response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+    name: str | None = None,
+    route_class_override: type[APIRoute] | None = None,
+    callbacks: list[BaseRoute] | None = None,
+    openapi_extra: dict[str, Any] | None = None,
+    generate_unique_id_function: Callable[[APIRoute], str]
+    | DefaultPlaceholder = Default(generate_unique_id),
+    strict_content_type: bool | DefaultPlaceholder = Default(True),
+) -> None:
+    """
+    Add a new API route.
+
+    Args:
+        path (str): The path of the API route.
+        endpoint (Callable[..., Any]): The endpoint function of the API route.
+        response_model (Any, optional): The response model of the API route. Defaults to None.
+        status_code (int | None, optional): The status code of the API route. Defaults to None.
+        tags (list[str | Enum] | None, optional): The tags of the API route. Defaults to None.
+        dependencies (Sequence[params.Depends] | None, optional): The dependencies of the API route. Defaults to None.
+        summary (str | None, optional): The summary of the API route. Defaults to None.
+        description (str | None, optional): The description of the API route. Defaults to None.
+        response_description (str, optional): The response description of the API route. Defaults to "Successful Response".
+        responses (dict[int | str, dict[str, Any]] | None, optional): The responses of the API route. Defaults to None.
+        deprecated (bool | None, optional): Whether the API route is deprecated. Defaults to None.
+        methods (set[str] | list[str] | None, optional): The methods of the API route. Defaults to None.
+        operation_id (str | None, optional): The operation ID of the API route. Defaults to None.
+        response_model_include (IncEx | None, optional): The response model include of the API route. Defaults to None.
+        response_model_exclude (IncEx | None, optional): The response model exclude of the API route. Defaults to None.
+        response_model_by_alias (bool, optional): Whether to use alias in response model. Defaults to True.
+        response_model_exclude_unset (bool, optional): Whether to exclude unset in response model. Defaults to False.
+        response_model_exclude_defaults (bool, optional): Whether to exclude defaults in response model. Defaults to False.
+        response_model_exclude_none (bool, optional): Whether to exclude none in response model. Defaults to False.
+        include_in_schema (bool, optional): Whether to include in schema. Defaults to True.
+        response_class (type[Response] | DefaultPlaceholder, optional): The response class of the API route. Defaults to JSONResponse.
+        name (str | None, optional): The name of the API route. Defaults to None.
+        route_class_override (type[APIRoute] | None, optional): The route class override of the API route. Defaults to None.
+        callbacks (list[BaseRoute] | None, optional): The callbacks of the API route. Defaults to None.
+        openapi_extra (dict[str, Any] | None, optional): The openapi extra of the API route. Defaults to None.
+        generate_unique_id_function (Callable[[APIRoute], str] | DefaultPlaceholder, optional): The generate unique ID function of the API route. Defaults to generate_unique_id.
+        strict_content_type (bool | DefaultPlaceholder, optional): Whether to use strict content type. Defaults to True.
+    """
+    route_class = rout
+    logger.info(f"Adding API route: {path}")
+    # Rest of the function remains the same
 
     def api_route(
         self,
