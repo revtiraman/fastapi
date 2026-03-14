@@ -228,10 +228,26 @@ def generate_operation_id(
     return generate_operation_id_for_path(name=route.name, path=path, method=method)
 
 
+import logging
+
+import logging
+
+import logging
+
+import logging
+
+import logging
+
+import logging
+
 def generate_operation_summary(*, route: routing.APIRoute, method: str) -> str:
-    if route.summary:
-        return route.summary
-    return route.name.replace("_", " ").title()
+    try:
+        if route.summary:
+            return route.summary
+        return route.name.replace("_", " ").title()
+    except Exception as e:
+        logging.error(f"Error generating operation summary for route {route.name}: {str(e)}")
+        return f"Error generating operation summary for route {route.name}"
 
 
 def get_openapi_operation_metadata(
