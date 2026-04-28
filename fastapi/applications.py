@@ -113,153 +113,56 @@ def __init__(
     ] = None,
     logger_name: str = "api_routes",
 ):
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    self.logger = logging.getLogger(logger_name)
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(logger_name)
 
-    # Add routes to the logger
-    for route in routes or []:
-        self.logger.info(f"Route added: {route.path}")
+    # Initialize the FastAPI app (call the parent __init__)
+    super().__init__(debug=debug, routes=routes, title=title)
 
-    def build_middleware_stack(self) -> ASGIApp:
-        # Duplicate/override from Starlette to add AsyncExitStackMiddleware
-        # inside of ExceptionMiddleware, inside of custom user middlewares
-        debug = self.debug
-        error_handler = None
-        exception_handlers: dict[Any, ExceptionHandler] = {}
-
-        for key, value in self.exception_handlers.items():
-            if key in (500, Exception):
-                error_handler = value
-            else:
-                exception_handlers[key] = value
-
-        middleware = (
-            [Middleware(ServerErrorMiddleware, handler=error_handler, debug=debug)]
-            + self.user_middleware
-            + [
-                Middleware(
-                    ExceptionMiddleware, handlers=exception_handlers, debug=debug
-                ),
-                # Add FastAPI-specific AsyncExitStackMiddleware for closing files.
-                # Before this was also used for closing dependencies with yield but
-                # those now have their own AsyncExitStack, to properly support
-                # streaming responses while keeping compatibility with the previous
-                # versions (as of writing 0.117.1) that allowed doing
-                # except HTTPException inside a dependency with yield.
-                # This needs to happen after user middlewares because those create a
-                # new contextvars context copy by using a new AnyIO task group.
-                # This AsyncExitStack preserves the context for contextvars, not
-                # strictly necessary for closing files but it was one of the original
-                # intentions.
-                # If the AsyncExitStack lived outside of the custom middlewares and
-                # contextvars were set, for example in a dependency with 'yield'
-                # in that internal contextvars context, the values would not be
-                # available in the outer context of the AsyncExitStack.
-                # By placing the middleware and the AsyncExitStack here, inside all
-                # user middlewares, the same context is used.
-                # This is currently not needed, only for closing files, but used to be
-                # important when dependencies with yield were closed here.
-                Middleware(AsyncExitStackMiddleware),
-            ]
+    # Middleware to log request and response details for every route
+    @self.middleware("http")
+    async def log_requests_and_responses(request: Request, call_next):
+        # Log incoming request
+        request_body = await request.body()
+        logger.info(
+            "Incoming request",
+            extra={
+                "method": request.method,
+                "url": str(request.url),
+                "headers": dict(request.headers),
+                "client": request.client.host if request.client else None,
+                "body": request_body.decode(errors="replace") if request_body else None,
+            },
         )
 
-        app = self.router
-        for cls, args, kwargs in reversed(middleware):
-            app = cls(app, *args, **kwargs)
-        return app
+        # Process the request
+        response = await call_next(request)
 
-    def openapi(self) -> dict[str, Any]:
-        """
-        Generate the OpenAPI schema of the application. This is called by FastAPI
-        internally.
+        # Read response body (requires response to be a StreamingResponse or similar)
+        response_body = b""
+        async for chunk in response.body_iterator:
+            response_body += chunk
+        # Recreate the response with the original body so it can be sent to the client
+        response = Response(
+            content=response_body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
 
-        The first time it is called it stores the result in the attribute
-        `app.openapi_schema`, and next times it is called, it just returns that same
-        result. To avoid the cost of generating the schema every time.
+        # Log outgoing response
+        logger.info(
+            "Outgoing response",
+            extra={
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+                "body": response_body.decode(errors="replace") if response_body else None,
+            },
+        )
+        return response
 
-        If you need to modify the generated OpenAPI schema, you could modify it.
-
-        Read more in the
-        [FastAPI docs for OpenAPI](https://fastapi.tiangolo.com/how-to/extending-openapi/).
-        """
-        if not self.openapi_schema:
-            self.openapi_schema = get_openapi(
-                title=self.title,
-                version=self.version,
-                openapi_version=self.openapi_version,
-                summary=self.summary,
-                description=self.description,
-                terms_of_service=self.terms_of_service,
-                contact=self.contact,
-                license_info=self.license_info,
-                routes=self.routes,
-                webhooks=self.webhooks.routes,
-                tags=self.openapi_tags,
-                servers=self.servers,
-                separate_input_output_schemas=self.separate_input_output_schemas,
-                external_docs=self.openapi_external_docs,
-            )
-        return self.openapi_schema
-
-    def setup(self) -> None:
-        if self.openapi_url:
-
-            async def openapi(req: Request) -> JSONResponse:
-                root_path = req.scope.get("root_path", "").rstrip("/")
-                schema = self.openapi()
-                if root_path and self.root_path_in_servers:
-                    server_urls = {s.get("url") for s in schema.get("servers", [])}
-                    if root_path not in server_urls:
-                        schema = dict(schema)
-                        schema["servers"] = [{"url": root_path}] + schema.get(
-                            "servers", []
-                        )
-                return JSONResponse(schema)
-
-            self.add_route(self.openapi_url, openapi, include_in_schema=False)
-        if self.openapi_url and self.docs_url:
-
-            async def swagger_ui_html(req: Request) -> HTMLResponse:
-                root_path = req.scope.get("root_path", "").rstrip("/")
-                openapi_url = root_path + self.openapi_url
-                oauth2_redirect_url = self.swagger_ui_oauth2_redirect_url
-                if oauth2_redirect_url:
-                    oauth2_redirect_url = root_path + oauth2_redirect_url
-                return get_swagger_ui_html(
-                    openapi_url=openapi_url,
-                    title=f"{self.title} - Swagger UI",
-                    oauth2_redirect_url=oauth2_redirect_url,
-                    init_oauth=self.swagger_ui_init_oauth,
-                    swagger_ui_parameters=self.swagger_ui_parameters,
-                )
-
-            self.add_route(self.docs_url, swagger_ui_html, include_in_schema=False)
-
-            if self.swagger_ui_oauth2_redirect_url:
-
-                async def swagger_ui_redirect(req: Request) -> HTMLResponse:
-                    return get_swagger_ui_oauth2_redirect_html()
-
-                self.add_route(
-                    self.swagger_ui_oauth2_redirect_url,
-                    swagger_ui_redirect,
-                    include_in_schema=False,
-                )
-        if self.openapi_url and self.redoc_url:
-
-            async def redoc_html(req: Request) -> HTMLResponse:
-                root_path = req.scope.get("root_path", "").rstrip("/")
-                openapi_url = root_path + self.openapi_url
-                return get_redoc_html(
-                    openapi_url=openapi_url, title=f"{self.title} - ReDoc"
-                )
-
-            self.add_route(self.redoc_url, redoc_html, include_in_schema=False)
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if self.root_path:
-            scope["root_path"] = self.root_path
-        await super().__call__(scope, receive, send)
+    # Store the logger for potential external use
+    self.logger = logger
 
 python
 import logging

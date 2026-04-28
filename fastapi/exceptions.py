@@ -42,7 +42,7 @@ class HTTPException(StarletteHTTPException):
     ```
     """
 
-    def __init__(
+def __init__(
         self,
         status_code: Annotated[
             int,
@@ -80,7 +80,26 @@ class HTTPException(StarletteHTTPException):
             ),
         ] = None,
     ) -> None:
+        # Log the incoming request details (status_code, detail, headers)
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "HTTPException initialized",
+            extra={
+                "status_code": status_code,
+                "detail": detail,
+                "headers": headers,
+            },
+        )
         super().__init__(status_code=status_code, detail=detail, headers=headers)
+        # Log the response that will be sent back after the exception is handled
+        logger.info(
+            "HTTPException response prepared",
+            extra={
+                "status_code": self.status_code,
+                "detail": self.detail,
+                "headers": self.headers,
+            },
+        )
 
 
 class WebSocketException(StarletteWebSocketException):
