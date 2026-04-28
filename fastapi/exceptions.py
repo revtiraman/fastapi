@@ -80,9 +80,8 @@ def __init__(
             ),
         ] = None,
     ) -> None:
-        import logging
-
-        logger = logging.getLogger("fastapi.request_logger")
+        # Log the incoming request details (status_code, detail, headers)
+        logger = logging.getLogger(__name__)
         logger.info(
             "HTTPException initialized",
             extra={
@@ -92,6 +91,15 @@ def __init__(
             },
         )
         super().__init__(status_code=status_code, detail=detail, headers=headers)
+        # Log the response that will be sent back after the exception is handled
+        logger.info(
+            "HTTPException response prepared",
+            extra={
+                "status_code": self.status_code,
+                "detail": self.detail,
+                "headers": self.headers,
+            },
+        )
 
 
 class WebSocketException(StarletteWebSocketException):

@@ -113,42 +113,56 @@ def __init__(
     ] = None,
     logger_name: str = "api_routes",
 ):
-    import logging
-    from starlette.middleware.base import BaseHTTPMiddleware
-    from starlette.requests import Request
-    from starlette.responses import Response
-    from time import perf_counter
-
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(logger_name)
 
-    # Existing FastAPI initialization (preserve original behavior)
+    # Initialize the FastAPI app (call the parent __init__)
     super().__init__(debug=debug, routes=routes, title=title)
 
-    # Middleware to log request and response details
-    async def log_requests(request: Request, call_next):
-        request_id = f"{request.method}:{request.url.path}"
+    # Middleware to log request and response details for every route
+    @self.middleware("http")
+    async def log_requests_and_responses(request: Request, call_next):
+        # Log incoming request
+        request_body = await request.body()
         logger.info(
-            f"START request_id={request_id} "
-            f"method={request.method} url={request.url} "
-            f"client={request.client}"
+            "Incoming request",
+            extra={
+                "method": request.method,
+                "url": str(request.url),
+                "headers": dict(request.headers),
+                "client": request.client.host if request.client else None,
+                "body": request_body.decode(errors="replace") if request_body else None,
+            },
         )
-        start_time = perf_counter()
-        try:
-            response: Response = await call_next(request)
-        except Exception as exc:
-            logger.exception(
-                f"EXCEPTION request_id={request_id} method={request.method} url={request.url}"
-            )
-            raise
-        process_time = perf_counter() - start_time
+
+        # Process the request
+        response = await call_next(request)
+
+        # Read response body (requires response to be a StreamingResponse or similar)
+        response_body = b""
+        async for chunk in response.body_iterator:
+            response_body += chunk
+        # Recreate the response with the original body so it can be sent to the client
+        response = Response(
+            content=response_body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+
+        # Log outgoing response
         logger.info(
-            f"END request_id={request_id} status_code={response.status_code} "
-            f"duration={process_time:.4f}s"
+            "Outgoing response",
+            extra={
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+                "body": response_body.decode(errors="replace") if response_body else None,
+            },
         )
         return response
 
-    self.add_middleware(BaseHTTPMiddleware, dispatch=log_requests)
+    # Store the logger for potential external use
+    self.logger = logger
 
 python
 import logging

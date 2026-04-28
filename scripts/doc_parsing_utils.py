@@ -477,14 +477,14 @@ def replace_html_links(
             link["full_tag"], replacement_link, 1
         )
         logger.debug(
-            "Replaced link %d on line %d: %s -> %s",
+            "Replaced link at index %d on line %d: %s -> %s",
             link_index,
             line_no + 1,
             link["full_tag"],
             replacement_link,
         )
 
-    logger.debug("replace_html_links completed successfully")
+    logger.debug("replace_html_links completed, returning %d modified lines", len(modified_text))
     return modified_text
 
 

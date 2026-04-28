@@ -267,9 +267,11 @@ def get_graphql_translation_discussion_comments(
     import logging
 
     logger = logging.getLogger(__name__)
+
+    # Log request parameters
     logger.info(
-        "GET /graphql_translation_discussion_comments - start",
-        extra={"discussion_number": discussion_number},
+        "Fetching GraphQL translation discussion comments",
+        extra={"discussion_number": discussion_number, "settings": str(settings)},
     )
 
     comment_nodes: list[Comment] = []
@@ -287,12 +289,10 @@ def get_graphql_translation_discussion_comments(
             after=last_edge.cursor,
         )
 
+    # Log response summary
     logger.info(
-        "GET /graphql_translation_discussion_comments - end",
-        extra={
-            "discussion_number": discussion_number,
-            "comments_returned": len(comment_nodes),
-        },
+        "Fetched GraphQL translation discussion comments",
+        extra={"discussion_number": discussion_number, "comment_count": len(comment_nodes)},
     )
     return comment_nodes
 
