@@ -107,6 +107,11 @@ def field_annotation_is_scalar(annotation: Any) -> bool:
 
 
 def field_annotation_is_scalar_sequence(annotation: type[Any] | None) -> bool:
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.debug("Entering field_annotation_is_scalar_sequence with annotation=%s", annotation)
+
     origin = get_origin(annotation)
     if origin is Union or origin is UnionType:
         at_least_one_scalar_sequence = False
@@ -115,12 +120,23 @@ def field_annotation_is_scalar_sequence(annotation: type[Any] | None) -> bool:
                 at_least_one_scalar_sequence = True
                 continue
             elif not field_annotation_is_scalar(arg):
+                logger.debug(
+                    "Returning False from field_annotation_is_scalar_sequence: non-scalar arg=%s", arg
+                )
                 return False
-        return at_least_one_scalar_sequence
-    return field_annotation_is_sequence(annotation) and all(
+        result = at_least_one_scalar_sequence
+        logger.debug(
+            "Returning %s from field_annotation_is_scalar_sequence (Union case)", result
+        )
+        return result
+    result = field_annotation_is_sequence(annotation) and all(
         field_annotation_is_scalar(sub_annotation)
         for sub_annotation in get_args(annotation)
     )
+    logger.debug(
+        "Returning %s from field_annotation_is_scalar_sequence (non-Union case)", result
+    )
+    return result
 
 
 def is_bytes_or_nonable_bytes_annotation(annotation: Any) -> bool:
