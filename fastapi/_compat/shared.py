@@ -106,7 +106,13 @@ def field_annotation_is_scalar(annotation: Any) -> bool:
     return annotation is Ellipsis or not field_annotation_is_complex(annotation)
 
 
+import logging
+from typing import Any, Union, get_args, get_origin
+
+logger = logging.getLogger(__name__)
+
 def field_annotation_is_scalar_sequence(annotation: type[Any] | None) -> bool:
+    logger.debug("Entering field_annotation_is_scalar_sequence with annotation: %s", annotation)
     origin = get_origin(annotation)
     if origin is Union or origin is UnionType:
         at_least_one_scalar_sequence = False
@@ -115,12 +121,25 @@ def field_annotation_is_scalar_sequence(annotation: type[Any] | None) -> bool:
                 at_least_one_scalar_sequence = True
                 continue
             elif not field_annotation_is_scalar(arg):
+                logger.debug(
+                    "Argument %s is not a scalar; returning False", arg
+                )
                 return False
-        return at_least_one_scalar_sequence
-    return field_annotation_is_sequence(annotation) and all(
+        result = at_least_one_scalar_sequence
+        logger.debug(
+            "Union type processed; at_least_one_scalar_sequence=%s, returning %s",
+            at_least_one_scalar_sequence,
+            result,
+        )
+        return result
+    result = field_annotation_is_sequence(annotation) and all(
         field_annotation_is_scalar(sub_annotation)
         for sub_annotation in get_args(annotation)
     )
+    logger.debug(
+        "Non-Union type processed; result=%s for annotation %s", result, annotation
+    )
+    return result
 
 
 def is_bytes_or_nonable_bytes_annotation(annotation: Any) -> bool:
