@@ -430,25 +430,38 @@ def _construct_html_link(
     return f"<a {attrs_str}>{link_text}</a>"
 
 
+import logging
+from typing import List, Dict
+
+logger = logging.getLogger(__name__)
+
 def replace_html_links(
-    text: list[str],
-    links: list[HtmlLinkInfo],
-    original_links: list[HtmlLinkInfo],
+    text: List[str],
+    links: List[Dict],
+    original_links: List[Dict],
     lang_code: str,
-) -> list[str]:
+) -> List[str]:
     """
     Replace HTML links in the given text with the links from the original document.
 
     Adjust URLs for the given language code.
     Fail if the number of links does not match the original.
     """
+    logger.debug(
+        "replace_html_links called with %d text lines, %d links, %d original_links, lang_code=%s",
+        len(text),
+        len(links),
+        len(original_links),
+        lang_code,
+    )
 
     if len(links) != len(original_links):
-        raise ValueError(
-            "Number of HTML links does not match the number in the "
-            "original document "
+        error_msg = (
+            "Number of HTML links does not match the number in the original document "
             f"({len(links)} vs {len(original_links)})"
         )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
 
     modified_text = text.copy()
     for link_index, link in enumerate(links):
@@ -464,7 +477,15 @@ def replace_html_links(
         modified_text[line_no] = modified_text[line_no].replace(
             link["full_tag"], replacement_link, 1
         )
+        logger.debug(
+            "Replaced link at index %d on line %d: %s -> %s",
+            link_index,
+            line_no + 1,
+            link["full_tag"],
+            replacement_link,
+        )
 
+    logger.debug("replace_html_links completed, returning modified text with %d lines", len(modified_text))
     return modified_text
 
 
