@@ -1033,20 +1033,14 @@ def get_body_field(
     else:
         BodyFieldInfo = params.Body
 
-        body_param_media_types = [
-            f.field_info.media_type
-            for f in flat_dependant.body_params
-            if isinstance(f.field_info, params.Body)
-        ]
-        if len(set(body_param_media_types)) == 1:
-            BodyFieldInfo_kwargs["media_type"] = body_param_media_types[0]
-    final_field = create_model_field(
+    return ModelField(
         name="body",
         type_=BodyModel,
-        alias="body",
+        class_validators={},
+        default=None,
+        required=required,
         field_info=BodyFieldInfo(**BodyFieldInfo_kwargs),
     )
-    return final_field
 
 
 def get_validation_alias(field: ModelField) -> str:

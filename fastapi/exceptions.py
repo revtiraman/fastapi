@@ -43,63 +43,17 @@ class HTTPException(StarletteHTTPException):
     """
 
 def __init__(
-        self,
-        status_code: Annotated[
-            int,
-            Doc(
-                """
-                HTTP status code to send to the client.
-
-                Read more about it in the
-                [FastAPI docs for Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/#use-httpexception)
-                """
-            ),
-        ],
-        detail: Annotated[
-            Any,
-            Doc(
-                """
-                Any data to be sent to the client in the `detail` key of the JSON
-                response.
-
-                Read more about it in the
-                [FastAPI docs for Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/#use-httpexception)
-                """
-            ),
-        ] = None,
-        headers: Annotated[
-            Mapping[str, str] | None,
-            Doc(
-                """
-                Any headers to send to the client in the response.
-
-                Read more about it in the
-                [FastAPI docs for Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/#add-custom-headers)
-
-                """
-            ),
-        ] = None,
-    ) -> None:
-        # Log the incoming request details (status_code, detail, headers)
-        logger = logging.getLogger(__name__)
-        logger.info(
-            "HTTPException initialized",
-            extra={
-                "status_code": status_code,
-                "detail": detail,
-                "headers": headers,
-            },
-        )
-        super().__init__(status_code=status_code, detail=detail, headers=headers)
-        # Log the response that will be sent back after the exception is handled
-        logger.info(
-            "HTTPException response prepared",
-            extra={
-                "status_code": self.status_code,
-                "detail": self.detail,
-                "headers": self.headers,
-            },
-        )
+    self,
+    errors: Sequence[Any],
+    *,
+    body: Any = None,
+    endpoint_ctx: EndpointContext | None = None,
+    health_check: bool = False,
+) -> None:
+    super().__init__(errors, endpoint_ctx=endpoint_ctx)
+    self.body = body
+    if health_check:
+        self.body = {"status": "OK"}
 
 
 class WebSocketException(StarletteWebSocketException):
