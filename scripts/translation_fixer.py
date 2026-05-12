@@ -52,7 +52,13 @@ def iter_all_lang_paths(lang_path_root: Path) -> Iterable[Path]:
         yield path
 
 
-def get_all_paths(lang: str):
+def get_all_paths(lang: str) -> list[str]:
+    """
+    Retrieves all paths relative to the language-specific documentation root, excluding non-translated sections.
+
+    :param lang: The language code for which to retrieve documentation paths.
+    :return: A list of strings representing the relative paths of the documentation files.
+    """
     res: list[str] = []
     lang_docs_root = Path("docs") / lang / "docs"
     for path in iter_all_lang_paths(lang_docs_root):
