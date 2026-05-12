@@ -96,9 +96,14 @@ def extract_code_includes(lines: list[str]) -> list[CodeIncludeInfo]:
 
 def replace_code_includes_with_placeholders(text: list[str]) -> list[str]:
     """
-    Replace code includes with placeholders.
-    """
+    Replaces code includes in the given text with a placeholder.
 
+    Parameters:
+    text (list[str]): A list of strings representing lines of text.
+
+    Returns:
+    list[str]: A modified list of strings with code includes replaced by placeholders.
+    """
     modified_text = text.copy()
     includes = extract_code_includes(text)
     for include in includes:

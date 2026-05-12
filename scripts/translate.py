@@ -38,6 +38,19 @@ def get_langs() -> dict[str, str]:
 
 
 def generate_lang_path(*, lang: str, path: Path) -> Path:
+    """
+    Generates a language-specific documentation path by replacing the 'en' directory in the given path with the specified language code.
+
+    Parameters:
+    lang (str): The language code for the target documentation directory.
+    path (Path): The original path to the English documentation.
+
+    Returns:
+    Path: The modified path with the language code replacing 'en'.
+
+    Raises:
+    AssertionError: If the provided path is not inside the 'docs/en/docs' directory.
+    """
     en_docs_path = Path("docs/en/docs")
     assert str(path).startswith(str(en_docs_path)), (
         f"Path must be inside {en_docs_path}"
@@ -48,6 +61,19 @@ def generate_lang_path(*, lang: str, path: Path) -> Path:
 
 
 def generate_en_path(*, lang: str, path: Path) -> Path:
+    """
+    Generates the English documentation path from a given language-specific path.
+
+    Parameters:
+    - lang (str): The language code for the source path.
+    - path (Path): The language-specific path to convert.
+
+    Returns:
+    - Path: The corresponding English documentation path.
+
+    Raises:
+    - AssertionError: If the provided path is already inside the English documentation directory.
+    """
     en_docs_path = Path("docs/en/docs")
     assert not str(path).startswith(str(en_docs_path)), (
         f"Path must not be inside {en_docs_path}"
@@ -150,7 +176,10 @@ def translate_page(
 
 def iter_all_en_paths() -> Iterable[Path]:
     """
-    Iterate on the markdown files to translate in order of priority.
+    Iterate over markdown files to translate, prioritizing certain directories.
+
+    Yields:
+        Path: The path to a markdown file.
     """
     first_dirs = [
         Path("docs/en/docs/learn"),
